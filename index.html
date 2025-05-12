@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Simple HTML Editor</title>
+<link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">
+<script src="https://tikzjax.com/v1/tikzjax.js"></script>
+<style>
+  body {
+    font-family: sans-serif;
+    display: flex;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  #editor-container {
+    width: calc(50% - 1px);
+    height: 100vh;
+    box-sizing: border-box;
+    border-right: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #editor {
+    flex-grow: 1;
+    box-sizing: border-box;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 1em;
+    border: none;
+    outline: none;
+    resize: none;
+  }
+
+  #preview-content {
+    width: 50vw;
+    height: 100vh;
+  }
+
+  svg {
+    width: 50vw;
+  }
+</style>
+</head>
+<body>
+<div id="editor-container">
+  <textarea id="editor">
+<script type="text/tikz">
+\begin{tikzpicture}
+  \draw (0,0) circle (1in);
+  \draw (0,0) -- (1,1);
+  \node[above right] at (1,1) {A};
+\end{tikzpicture}
+</script>
+  </textarea>
+</div>
+  <div id="preview-content"></div>
+<script>
+  const editor = document.getElementById('editor');
+  const previewContent = document.getElementById('preview-content');
+  let tikzScripts = [];
+
+  function renderTikz() {
+    const text = editor.value;
+    previewContent.innerHTML = text;
+
+    tikzScripts.forEach(script => script.remove());
+    tikzScripts = [];
+
+    const newTikzElements = previewContent.querySelectorAll('script[type="text/tikz"]');
+
+    newTikzElements.forEach(element => {
+      previewContent.appendChild(element);
+      tikzScripts.push(element);
+    });
+
+    if (typeof tikzjax !== 'undefined') {
+      if (tikzjax.isReady) {
+        tikzjax.rerender();
+      } else {
+        tikzjax.then(() => {
+          tikzjax.rerender();
+        });
+      }
+    } else {
+      console.error("tikzjax is not defined.  Make sure the script is loaded correctly.");
+    }
+  }
+
+  renderTikz();
+</script>
+</body>
+</html>
+
