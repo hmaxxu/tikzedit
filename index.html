@@ -1,90 +1,114 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>tikzedit</title>
-<link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">
-<script src="https://tikzjax.com/v1/tikzjax.js"></script>
-<style>
-  body {
-    font-family: sans-serif;
-    display: flex;
-    margin: 0;
-    overflow: hidden;
-  }
+  <title>tikzedit</title>
+  <link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">
+  <script src="https://tikzjax.com/v1/tikzjax.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      margin: 0;
+      overflow: hidden;
+    }
 
-  #editor-container {
-    width: calc(50% - 1px);
-    height: 100vh;
-    box-sizing: border-box;
-    border-right: 1px solid #ccc;
-    display: flex;
-    flex-direction: column;
-  }
+    #editor-container {
+      width: calc(50% - 1px);
+      height: 100vh;
+      box-sizing: border-box;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+    }
 
-  #editor {
-    flex-grow: 1;
-    box-sizing: border-box;
-    padding: 10px;
-    font-family: monospace;
-    font-size: 1em;
-    border: none;
-    outline: none;
-    resize: none;
-  }
+    #editor {
+      flex-grow: 1;
+      box-sizing: border-box;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 1em;
+      border: none;
+      outline: none;
+      resize: none;
+    }
 
-  #preview-container {
-    width: 50vw;
-    height: 100vh;
-    position: relative;
-  }
+    #preview-container {
+      width: 50vw;
+      height: 100vh;
+      position: relative;
+    }
 
-  #preview-content {
-    width: 100%;
-    height: 100%;
-  }
+    #preview-content {
+      width: 100%;
+      height: 100%;
+    }
 
-  svg {
-    width: 100%;
-    height: auto;
-  }
+    svg {
+      width: 100%;
+      height: auto;
+    }
 
-  #render-button {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    padding: 8px 15px;
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-  }
+    #render-button {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      padding: 8px 15px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+    }
 
-  #render-button:hover {
-    background-color: #1976D2;
-  }
-</style>
+    #render-button:hover {
+      background-color: #1976D2;
+    }
+  </style>
 </head>
 <body>
 <div id="editor-container">
   <textarea id="editor">
-<script type="text/tikz">
 \begin{tikzpicture}
-  \draw (0,0) circle (1in);
-  \draw (0,0) -- (1,1);
-  \node[above right] at (1,1) {A};
+    \pgfmathsetmacro{\AngleA}{15} % Angle of ray AB (relative to x-axis)
+    \pgfmathsetmacro{\AngleC}{75} % Angle of ray AC
+    \pgfmathsetmacro{\RayLength}{4} % Length of the rays
+    \pgfmathsetmacro{\ArcRadius}{0.8} % Radius for the angle marks
+
+    \pgfmathsetmacro{\AngleD}{(\AngleA + \AngleC) / 2} 
+
+    \coordinate (A) at (0, 0); % Vertex
+    \coordinate (B) at (\AngleA:\RayLength); % Point on Ray 1 (AB)
+    \coordinate (C) at (\AngleC:\RayLength); % Point on Ray 2 (AC)
+    \coordinate (D) at (\AngleD:\RayLength); % Point on Bisector (AD)
+
+    \draw[thick, ->] (A) -- (B) node[anchor={\AngleA-90}] {$B$};
+    \draw[thick, ->] (A) -- (C) node[anchor={\AngleC+90}] {$C$};
+
+    \draw[dashed, blue, ->] (A) -- (D) node[above right] {$D$};
+    \draw[red] (A) + (\AngleA:\ArcRadius) arc (\AngleA:\AngleD:\ArcRadius);
+    \draw[red] (A) + (\AngleD:\ArcRadius) arc (\AngleD:\AngleC:\ArcRadius);
+
+    \pgfmathsetmacro{\LabelAngleBD}{(\AngleA + \AngleD) / 2}
+    \pgfmathsetmacro{\LabelAngleDC}{(\AngleD + \AngleC) / 2}
+
+    \node[red] at (\LabelAngleBD:1.1*\ArcRadius) {$\alpha$};
+    \node[red] at (\LabelAngleDC:1.1*\ArcRadius) {$\alpha$};
+
+    \fill (A) circle (2pt) node[below left] {$A$};
 \end{tikzpicture}
-</script>
   </textarea>
 </div>
 <div id="preview-container">
-  <div id="preview-content"></div>
+  <div id="preview-content">
+    <script id="tikz-target" type="text/tikz"></script>
+  </div>
   <button id="render-button" onclick="location.reload()">Render</button>
 </div>
 <script>
   const editor = document.getElementById('editor');
-  const previewContent = document.getElementById('preview-content');
+  const tikzTarget = document.getElementById('tikz-target'); // Target the static script element
+  const renderButton = document.getElementById('render-button');
   const LOCAL_STORAGE_KEY = 'tikzEditorContent';
 
   // load content from localStorage on page load
@@ -96,33 +120,34 @@
     renderTikz();
   });
 
+  // Add event listener to call renderTikz on button click
+  renderButton.addEventListener('click', () => {
+    renderTikz();
+  });
+
+
   function renderTikz() {
     const text = editor.value;
-    previewContent.innerHTML = text;
 
-    const existingScripts = previewContent.querySelectorAll('script[type="text/tikz"]');
-    existingScripts.forEach(script => script.remove());
-
-    const newScript = document.createElement('script');
-    newScript.type = 'text/tikz';
-    newScript.textContent = text.substring(text.indexOf('\\begin{tikzpicture}'), text.lastIndexOf('\\end{tikzpicture}') + '\\end{tikzpicture}'.length);
-    previewContent.appendChild(newScript);
+    // Update the content of the pre-existing script tag with the editor's text
+    tikzTarget.textContent = text; 
 
     if (typeof tikzjax !== 'undefined') {
-      if (tikzjax.isReady) {
-        tikzjax.rerender();
-      } else {
-        tikzjax.then(() => {
-          tikzjax.rerender();
-        });
-      }
+      // Use rerender() to process the updated TikZ code
+      tikzjax.rerender();
     } else {
-      console.error("tikzjax is not defined.  Make sure the script is loaded correctly.");
+      console.error("tikzjax is not defined. Make sure the script is loaded correctly.");
     }
 
     // save content to localStorage
     localStorage.setItem(LOCAL_STORAGE_KEY, text);
   }
+
+  // Update localStorage AND render whenever the user types
+  editor.addEventListener('input', () => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, editor.value);
+    renderTikz(); // Call renderTikz here for auto-update
+  });
 </script>
 </body>
 </html>
